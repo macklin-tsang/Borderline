@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: borderline
+      POSTGRES_USER: ${DB_USERNAME:-borderline}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-borderline}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-borderline} -d borderline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  geoip:
+    build: ./geoip-service
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/borderline
+      DB_USERNAME: ${DB_USERNAME:-borderline}
+      DB_PASSWORD: ${DB_PASSWORD:-borderline}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GEOIP_URL: http://geoip:8001
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-in-prod}
+      HMAC_SECRET: ${HMAC_SECRET:-local-dev-hmac-secret-change-in-prod}
+      HMAC_KEY_VERSION: ${HMAC_KEY_VERSION:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      geoip:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

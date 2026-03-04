@@ -1,0 +1,51 @@
+# Java / Maven
+backend/target/
+backend/.mvn/
+*.class
+*.jar
+*.war
+
+# Spring Boot
+backend/src/main/resources/application-local.yml
+
+# Python
+geoip-service/__pycache__/
+geoip-service/app/__pycache__/
+geoip-service/.venv/
+geoip-service/*.egg-info/
+geoip-service/GeoLite2-*.mmdb
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env.local
+.npm/
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+#instructions.md
+instructions.md
