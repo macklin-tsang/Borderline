@@ -40,6 +40,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 
+    @ExceptionHandler(GeofenceNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleGeofenceNotFound(GeofenceNotFoundException ex) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        problem.setTitle("Geofence Not Found");
+        problem.setDetail(ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem);
+    }
+
     // Catch-all: prevents stack traces leaking to clients on unexpected errors
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ProblemDetail> handleUnexpected(Exception ex) {
