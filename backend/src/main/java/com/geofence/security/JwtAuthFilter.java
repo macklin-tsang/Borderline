@@ -8,12 +8,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component
+// Not @Component — registered directly in SecurityConfig to avoid double-registration
+// (once by the servlet container and once by addFilterBefore in the security chain)
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final String BEARER_PREFIX = "Bearer ";
@@ -47,9 +47,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             principal, null, principal.getAuthorities());
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(auth);
-        } catch (JwtException e) {
-            // Invalid or expired token — continue without setting auth.
-            // The request will be rejected at the authorization stage if the endpoint requires auth.
+        } catch (JwtException | IllegalArgumentException e) {
+            // Invalid/expired token or malformed UUID subject — clear any stale auth context
+            // and continue; the request will be rejected at the authorization stage.
+            SecurityContextHolder.clearContext();
         }
 
         chain.doFilter(request, response);

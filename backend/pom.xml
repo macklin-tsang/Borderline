@@ -81,6 +81,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- WebSocket / STOMP -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- PostGIS / Spatial (JTS Geometry types via Hibernate 6) -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>

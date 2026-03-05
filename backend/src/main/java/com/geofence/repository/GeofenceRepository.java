@@ -13,7 +13,8 @@ public interface GeofenceRepository extends JpaRepository<Geofence, UUID> {
 
     List<Geofence> findByUserIdAndActiveTrue(UUID userId);
 
-    Optional<Geofence> findByIdAndUserId(UUID id, UUID userId);
+    // active=true filter prevents operating on soft-deleted geofences
+    Optional<Geofence> findByIdAndUserIdAndActiveTrue(UUID id, UUID userId);
 
     // Two-step spatial filter: && bounding box (GIST) then ST_Contains (precise)
     @Query(value = """

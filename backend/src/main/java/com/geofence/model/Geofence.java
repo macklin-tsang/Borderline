@@ -26,11 +26,12 @@ public class Geofence {
     @Column(nullable = false)
     private boolean active = true;
 
+    // Defaults match V1__schema.sql (DEFAULT TRUE for both columns)
     @Column(name = "alert_on_entry", nullable = false)
-    private boolean alertOnEntry = false;
+    private boolean alertOnEntry = true;
 
     @Column(name = "alert_on_exit", nullable = false)
-    private boolean alertOnExit = false;
+    private boolean alertOnExit = true;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

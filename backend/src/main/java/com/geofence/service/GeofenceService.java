@@ -39,13 +39,13 @@ public class GeofenceService {
 
     @Transactional(readOnly = true)
     public GeofenceResponse getOne(UUID userId, UUID id) {
-        return repo.findByIdAndUserId(id, userId)
+        return repo.findByIdAndUserIdAndActiveTrue(id, userId)
                 .map(this::toResponse)
                 .orElseThrow(() -> new GeofenceNotFoundException(id));
     }
 
     public GeofenceResponse update(UUID userId, UUID id, GeofenceRequest req) {
-        Geofence geofence = repo.findByIdAndUserId(id, userId)
+        Geofence geofence = repo.findByIdAndUserIdAndActiveTrue(id, userId)
                 .orElseThrow(() -> new GeofenceNotFoundException(id));
         geofence.setName(req.name());
         geofence.setGeometry(toGeometry(req.geometry()));
@@ -55,7 +55,7 @@ public class GeofenceService {
     }
 
     public void delete(UUID userId, UUID id) {
-        Geofence geofence = repo.findByIdAndUserId(id, userId)
+        Geofence geofence = repo.findByIdAndUserIdAndActiveTrue(id, userId)
                 .orElseThrow(() -> new GeofenceNotFoundException(id));
         geofence.setActive(false);
         repo.save(geofence);

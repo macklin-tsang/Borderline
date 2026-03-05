@@ -12,8 +12,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 public class AuthService {
+
+    // Pre-computed BCrypt hash of a throwaway value.
+    // Used on the "email not found" branch to equalize timing with the "wrong password" branch,
+    // preventing timing-based email enumeration (a user gets ~100-300ms BCrypt delay either way).
+    private final String dummyHash;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -25,6 +32,7 @@ public class AuthService {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.dummyHash = passwordEncoder.encode("dummy-timing-equalizer");
     }
 
     @Transactional
@@ -37,15 +45,19 @@ public class AuthService {
         return new AuthResponse(jwtService.generate(user));
     }
 
-    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+        Optional<User> userOpt = userRepository.findByEmail(request.email());
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        // Always run BCrypt to equalize timing regardless of whether the email exists.
+        // Without this, an attacker can distinguish "email not found" (fast) from
+        // "wrong password" (slow) via response time alone.
+        String hashToCheck = userOpt.map(User::getPasswordHash).orElse(dummyHash);
+        boolean passwordMatches = passwordEncoder.matches(request.password(), hashToCheck);
+
+        if (userOpt.isEmpty() || !passwordMatches) {
             throw new BadCredentialsException("Invalid credentials");
         }
 
-        return new AuthResponse(jwtService.generate(user));
+        return new AuthResponse(jwtService.generate(userOpt.get()));
     }
 }

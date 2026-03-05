@@ -62,15 +62,6 @@ public class JwtService {
         return new JwtDetails(UUID.fromString(claims.getSubject()), email);
     }
 
-    public boolean isValid(String token) {
-        try {
-            parseClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
-    }
-
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(key)
