@@ -51,6 +51,7 @@ public class Device {
     public Instant getLastSeen() { return lastSeen; }
     public Instant getCreatedAt() { return createdAt; }
 
+    public void setName(String name) { this.name = name; }
     public void setLastLat(Double lastLat) { this.lastLat = lastLat; }
     public void setLastLon(Double lastLon) { this.lastLon = lastLon; }
     public void setLastSeen(Instant lastSeen) { this.lastSeen = lastSeen; }

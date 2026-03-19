@@ -12,6 +12,7 @@ spring:
       connection-timeout: 3000
 
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: validate
     open-in-view: false
@@ -19,6 +20,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 management:
   endpoints:
@@ -39,5 +45,3 @@ app:
   hmac:
     secret: ${HMAC_SECRET}
     key-version: ${HMAC_KEY_VERSION:1}
-  geoip:
-    url: ${GEOIP_URL:http://localhost:8001}

@@ -20,6 +20,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
 
+    // Skip JWT parsing on auth endpoints — sending an expired token to /auth/login
+    // should not interfere with the login flow.
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getServletPath().startsWith("/api/auth/");
+    }
+
     public JwtAuthFilter(JwtService jwtService) {
         this.jwtService = jwtService;
     }

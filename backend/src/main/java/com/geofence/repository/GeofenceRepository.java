@@ -27,4 +27,5 @@ public interface GeofenceRepository extends JpaRepository<Geofence, UUID> {
     List<Geofence> findContaining(@Param("userId") UUID userId,
                                   @Param("lat") double lat,
                                   @Param("lon") double lon);
+
 }

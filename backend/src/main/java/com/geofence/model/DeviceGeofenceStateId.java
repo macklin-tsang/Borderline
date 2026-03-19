@@ -1,5 +1,6 @@
 package com.geofence.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
 import java.io.Serializable;
@@ -9,7 +10,12 @@ import java.util.UUID;
 @Embeddable
 public class DeviceGeofenceStateId implements Serializable {
 
+    // Explicit @Column names guard against naming-strategy changes (e.g. switching to
+    // PhysicalNamingStrategyStandardImpl which would map deviceId → "deviceId" not "device_id").
+    @Column(name = "device_id")
     private UUID deviceId;
+
+    @Column(name = "geofence_id")
     private UUID geofenceId;
 
     protected DeviceGeofenceStateId() {}

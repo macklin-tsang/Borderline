@@ -20,6 +20,13 @@ interface UseWebSocketOptions {
 export function useWebSocket({ token, onAlert, onSecurityEvents }: UseWebSocketOptions) {
   const clientRef = useRef<Client | null>(null)
 
+  // Callback refs — always current without triggering reconnect on every render.
+  // Closures inside onConnect capture these refs, not the props directly.
+  const onAlertRef = useRef(onAlert)
+  const onSecurityEventsRef = useRef(onSecurityEvents)
+  onAlertRef.current = onAlert
+  onSecurityEventsRef.current = onSecurityEvents
+
   useEffect(() => {
     if (!token) return
 
@@ -33,14 +40,14 @@ export function useWebSocket({ token, onAlert, onSecurityEvents }: UseWebSocketO
         client.subscribe('/user/queue/alerts', (msg) => {
           try {
             const alert = JSON.parse(msg.body) as GeofenceAlert
-            onAlert?.(alert)
+            onAlertRef.current?.(alert)
           } catch { /* ignore malformed frames */ }
         })
 
         client.subscribe('/user/queue/security-events', (msg) => {
           try {
             const events = JSON.parse(msg.body) as SecurityEvent[]
-            onSecurityEvents?.(events)
+            onSecurityEventsRef.current?.(events)
           } catch { /* ignore malformed frames */ }
         })
       },
@@ -53,7 +60,7 @@ export function useWebSocket({ token, onAlert, onSecurityEvents }: UseWebSocketO
       client.deactivate()
       clientRef.current = null
     }
-  }, [token]) // eslint-disable-line react-hooks/exhaustive-deps — callbacks wrapped in refs externally
+  }, [token])
 
   return clientRef
 }

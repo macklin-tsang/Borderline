@@ -1,14 +1,20 @@
-.PHONY: dev down test build clean logs
+.PHONY: dev demo down test build clean logs
 
 dev:
 	docker-compose up --build
+
+# Start detached and seed a demo account + geofence + device.
+# Open http://localhost:3000, log in, select "Demo Device" in the top bar,
+# then click anywhere on the map to move it and trigger live ENTER/EXIT alerts.
+demo:
+	docker-compose up --build -d
+	bash scripts/demo-seed.sh
 
 down:
 	docker-compose down
 
 test:
 	cd backend && mvn test -q
-	cd geoip-service && python -m pytest -q
 	cd frontend && npm test -- --watchAll=false
 
 build:
@@ -19,4 +25,4 @@ clean:
 	cd backend && mvn clean -q
 
 logs:
-	docker-compose logs -f backend geoip
+	docker-compose logs -f backend frontend

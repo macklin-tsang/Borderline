@@ -1,7 +1,11 @@
 package com.geofence.security;
 
+import io.jsonwebtoken.JwtException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessageDeliveryException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -20,6 +24,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class StompAuthInterceptor implements ChannelInterceptor {
 
+    private static final Logger log = LoggerFactory.getLogger(StompAuthInterceptor.class);
     private final JwtService jwtService;
 
     public StompAuthInterceptor(JwtService jwtService) {
@@ -37,10 +42,7 @@ public class StompAuthInterceptor implements ChannelInterceptor {
 
         String token = accessor.getLogin();
         if (token == null || token.isBlank()) {
-            // No token — Spring Security will reject the session when a protected
-            // destination is accessed. Returning the message here avoids breaking
-            // the CONNECT entirely for unauthenticated contexts.
-            return message;
+            throw new MessageDeliveryException(message, "Authentication required");
         }
 
         try {
@@ -49,8 +51,9 @@ public class StompAuthInterceptor implements ChannelInterceptor {
             UsernamePasswordAuthenticationToken auth =
                     new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
             accessor.setUser(auth);
-        } catch (Exception e) {
-            // Invalid token — leave user unset; access to protected destinations will fail
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("STOMP CONNECT rejected — invalid JWT: {}", e.getMessage());
+            throw new MessageDeliveryException(message, "Authentication required");
         }
 
         return message;

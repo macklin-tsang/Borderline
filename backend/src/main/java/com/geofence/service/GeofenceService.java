@@ -66,6 +66,7 @@ public class GeofenceService {
     @SuppressWarnings("unchecked")
     private Geometry toGeometry(Map<String, Object> geo) {
         String type = (String) geo.get("type");
+        if (type == null) throw new IllegalArgumentException("geometry.type is required");
         return switch (type) {
             case "Point" -> {
                 List<Number> c = (List<Number>) geo.get("coordinates");

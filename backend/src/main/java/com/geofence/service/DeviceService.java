@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -66,7 +67,10 @@ public class DeviceService {
      * so concurrent pings for the same device cannot produce duplicate crossing events.
      */
     public DeviceResponse locationPing(UUID userId, UUID deviceId, LocationPingRequest req) {
-        Device device = deviceRepo.findByIdAndUserId(deviceId, userId)
+        // PESSIMISTIC_WRITE on the device row serializes all concurrent pings for this
+        // device. Without this, two simultaneous first-pings both see no state row,
+        // SELECT FOR UPDATE acquires no lock on non-existent rows, and both fire ENTER.
+        Device device = deviceRepo.findByIdAndUserIdForUpdate(deviceId, userId)
                 .orElseThrow(() -> new DeviceNotFoundException(deviceId));
 
         device.setLastLat(req.lat());
@@ -74,8 +78,10 @@ public class DeviceService {
         device.setLastSeen(Instant.now());
         deviceRepo.save(device);
 
-        // All active geofences owned by the user
+        // All active geofences owned by the user — sorted by id for deterministic
+        // SELECT FOR UPDATE lock ordering, preventing deadlocks under concurrent pings.
         List<Geofence> allFences = geofenceRepo.findByUserIdAndActiveTrue(userId);
+        allFences.sort(Comparator.comparing(Geofence::getId));
 
         // Geofences that spatially contain the new point (two-step: && + ST_Contains)
         Set<UUID> containingIds = geofenceRepo.findContaining(userId, req.lat(), req.lon())
@@ -105,6 +111,20 @@ public class DeviceService {
         return toResponse(device);
     }
 
+    public DeviceResponse rename(UUID userId, UUID deviceId, String name) {
+        Device device = deviceRepo.findByIdAndUserId(deviceId, userId)
+                .orElseThrow(() -> new DeviceNotFoundException(deviceId));
+        device.setName(name);
+        return toResponse(deviceRepo.save(device));
+    }
+
+    public void delete(UUID userId, UUID deviceId) {
+        Device device = deviceRepo.findByIdAndUserId(deviceId, userId)
+                .orElseThrow(() -> new DeviceNotFoundException(deviceId));
+        // DB cascade (ON DELETE CASCADE) removes device_geofence_state rows automatically
+        deviceRepo.delete(device);
+    }
+
     private DeviceResponse toResponse(Device d) {
         return new DeviceResponse(
                 d.getId(),
@@ -112,7 +132,8 @@ public class DeviceService {
                 d.getLastLat(),
                 d.getLastLon(),
                 d.getLastSeen(),
-                d.getCreatedAt()
+                d.getCreatedAt(),
+                stateRepo.existsByIdDeviceIdAndInsideTrue(d.getId())
         );
     }
 }

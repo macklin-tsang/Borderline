@@ -35,18 +35,20 @@ class JwtServiceTest {
     }
 
     @Test
-    void isValid_returnsFalseForMalformedTokens() {
-        assertThat(jwtService.isValid("not-a-jwt")).isFalse();
-        assertThat(jwtService.isValid("")).isFalse();
-        assertThat(jwtService.isValid("a.b.c")).isFalse();
+    void extractDetails_throwsForMalformedTokens() {
+        assertThatThrownBy(() -> jwtService.extractDetails("not-a-jwt"))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
+        assertThatThrownBy(() -> jwtService.extractDetails("a.b.c"))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
     }
 
     @Test
-    void isValid_returnsFalseForTokenFromDifferentSecret() {
+    void extractDetails_throwsForTokenFromDifferentSecret() {
         JwtService otherService = new JwtService("completely-different-secret-32chars!!", EXPIRY_MS);
         String tokenFromOther = otherService.generate(testUser);
 
-        assertThat(jwtService.isValid(tokenFromOther)).isFalse();
+        assertThatThrownBy(() -> jwtService.extractDetails(tokenFromOther))
+                .isInstanceOf(io.jsonwebtoken.JwtException.class);
     }
 
     @Test

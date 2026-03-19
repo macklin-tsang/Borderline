@@ -20,8 +20,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Simple in-memory broker for /queue (point-to-point) and /topic (broadcast)
-        registry.enableSimpleBroker("/queue", "/topic");
+        // Simple in-memory broker for /queue (point-to-point) — /topic intentionally excluded
+        registry.enableSimpleBroker("/queue");
         // Client sends to /app/** which routes to @MessageMapping methods
         registry.setApplicationDestinationPrefixes("/app");
         // Enables /user/{username}/queue/... destinations
@@ -31,7 +31,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // /ws is the WebSocket handshake endpoint; SockJS fallback for non-WS browsers
-        registry.addEndpoint("/ws").withSockJS();
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("http://localhost:3000")
+                .withSockJS();
     }
 
     @Override

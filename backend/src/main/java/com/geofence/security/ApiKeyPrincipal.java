@@ -4,24 +4,29 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Stateless principal reconstructed from JWT claims — no DB query per request.
- * Trade-off: a deleted user's token remains valid until expiry (24h by default).
- * Acceptable for an internship project; production would use short-lived tokens + refresh.
+ * Stateless principal for API-key-authenticated requests.
+ * Scopes from the API key become SCOPE_* granted authorities,
+ * enabling @PreAuthorize("hasAuthority('SCOPE_read')") on protected endpoints.
  */
-public record JwtUserDetails(UUID userId, String email) implements UserDetails {
+public record ApiKeyPrincipal(UUID userId, UUID apiKeyId, String[] scopes) implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        if (scopes == null || scopes.length == 0) {
+            return List.of();
+        }
+        return Arrays.stream(scopes)
+                .map(s -> new SimpleGrantedAuthority("SCOPE_" + s))
+                .toList();
     }
 
-    // Returns userId string so SimpMessagingTemplate.convertAndSendToUser(userId, ...)
-    // in AlertService routes to the correct /user/{userId}/queue/alerts session.
+    // Principal name = userId string — used by SimpMessagingTemplate for WebSocket routing
     @Override public String getUsername()               { return userId.toString(); }
     @Override public String getPassword()               { return null; }
     @Override public boolean isAccountNonExpired()      { return true; }

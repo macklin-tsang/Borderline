@@ -87,6 +87,12 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
+        <!-- Redis (Lua-atomic rate limiting) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
         <!-- PostGIS / Spatial (JTS Geometry types via Hibernate 6) -->
         <dependency>
             <groupId>org.hibernate.orm</groupId>

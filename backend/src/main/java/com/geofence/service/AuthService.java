@@ -42,9 +42,10 @@ public class AuthService {
         }
         User user = new User(request.email(), passwordEncoder.encode(request.password()));
         userRepository.save(user);
-        return new AuthResponse(jwtService.generate(user));
+        return new AuthResponse(jwtService.generate(user), user.getId().toString(), user.getEmail());
     }
 
+    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         Optional<User> userOpt = userRepository.findByEmail(request.email());
 
@@ -58,6 +59,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid credentials");
         }
 
-        return new AuthResponse(jwtService.generate(userOpt.get()));
+        User user = userOpt.get();
+        return new AuthResponse(jwtService.generate(user), user.getId().toString(), user.getEmail());
     }
 }

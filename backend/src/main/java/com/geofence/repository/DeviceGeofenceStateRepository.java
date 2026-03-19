@@ -9,11 +9,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.List;
 
 public interface DeviceGeofenceStateRepository extends JpaRepository<DeviceGeofenceState, DeviceGeofenceStateId> {
 
@@ -22,10 +19,10 @@ public interface DeviceGeofenceStateRepository extends JpaRepository<DeviceGeofe
     @Query("SELECT s FROM DeviceGeofenceState s WHERE s.id = :id")
     Optional<DeviceGeofenceState> findByIdForUpdate(@Param("id") DeviceGeofenceStateId id);
 
-    List<DeviceGeofenceState> findByIdDeviceId(UUID deviceId);
-
-    // ON CONFLICT upsert — atomically inserts or updates crossing state
-    @Modifying
+    // ON CONFLICT upsert — atomically inserts or updates crossing state.
+    // clearAutomatically = true evicts the entity from the L1 persistence context
+    // cache so any subsequent reads in the same transaction see the DB-level value.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
             INSERT INTO device_geofence_state (device_id, geofence_id, inside, updated_at)
             VALUES (:deviceId, :geofenceId, :inside, NOW())
@@ -35,4 +32,6 @@ public interface DeviceGeofenceStateRepository extends JpaRepository<DeviceGeofe
     void upsert(@Param("deviceId") UUID deviceId,
                 @Param("geofenceId") UUID geofenceId,
                 @Param("inside") boolean inside);
+
+    boolean existsByIdDeviceIdAndInsideTrue(UUID deviceId);
 }

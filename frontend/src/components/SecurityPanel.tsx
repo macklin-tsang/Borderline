@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import type { CSSProperties } from 'react'
 import type { SecurityEvent, RequestLog } from '../types'
 import { api } from '../api/client'
 
@@ -15,34 +16,34 @@ const s = {
     background: '#1e293b', borderLeft: '1px solid #334155',
     display: 'flex', flexDirection: 'column', zIndex: 1000,
     overflow: 'hidden',
-  },
+  } as CSSProperties,
   header: {
     padding: '0.75rem 1rem', borderBottom: '1px solid #334155',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  },
-  title: { fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' },
-  tabRow: { display: 'flex', borderBottom: '1px solid #334155' },
-  tab: (active: boolean): React.CSSProperties => ({
+  } as CSSProperties,
+  title: { fontWeight: 700, fontSize: '0.9rem', color: '#f1f5f9' } as CSSProperties,
+  tabRow: { display: 'flex', borderBottom: '1px solid #334155' } as CSSProperties,
+  tab: (active: boolean): CSSProperties => ({
     flex: 1, padding: '0.5rem', fontSize: '0.8rem', cursor: 'pointer',
     border: 'none', background: 'transparent',
     color: active ? '#3b82f6' : '#64748b',
     borderBottom: active ? '2px solid #3b82f6' : '2px solid transparent',
   }),
-  list: { flex: 1, overflowY: 'auto', padding: '0.5rem' },
+  list: { flex: 1, overflowY: 'auto', padding: '0.5rem' } as CSSProperties,
   eventRow: {
     padding: '0.5rem', borderRadius: 6, marginBottom: '0.4rem',
     background: '#0f172a', fontSize: '0.78rem',
-  },
-  badge: (color: string): React.CSSProperties => ({
+  } as CSSProperties,
+  badge: (color: string): CSSProperties => ({
     display: 'inline-block', padding: '0.1rem 0.4rem', borderRadius: 4,
     background: color + '22', color, fontSize: '0.7rem', fontWeight: 700,
     marginBottom: '0.25rem',
   }),
-  meta: { color: '#64748b', marginTop: '0.15rem' },
+  meta: { color: '#64748b', marginTop: '0.15rem' } as CSSProperties,
   loadBtn: {
     margin: '0.5rem', padding: '0.4rem', borderRadius: 6, border: '1px solid #334155',
     background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem',
-  },
+  } as CSSProperties,
 }
 
 export function SecurityPanel({ liveEvents }: Props) {
@@ -87,7 +88,6 @@ export function SecurityPanel({ liveEvents }: Props) {
               <div style={s.badge(typeColor(ev.type))}>{ev.type}</div>
               <div style={{ color: '#e2e8f0' }}>{ev.endpoint}</div>
               <div style={s.meta}>{ev.detail}</div>
-              {ev.countryCode && <div style={s.meta}>Country: {ev.countryCode}</div>}
               <div style={s.meta}>{new Date(ev.timestamp).toLocaleTimeString()}</div>
             </div>
           ))}
@@ -110,7 +110,6 @@ export function SecurityPanel({ liveEvents }: Props) {
                 </div>
                 <div style={s.meta}>
                   {log.statusCode}
-                  {log.countryCode && ` · ${log.countryCode}`}
                   {log.durationMs != null && ` · ${log.durationMs}ms`}
                 </div>
                 <div style={s.meta}>{new Date(log.createdAt).toLocaleString()}</div>

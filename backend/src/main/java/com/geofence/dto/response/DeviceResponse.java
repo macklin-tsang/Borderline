@@ -9,5 +9,6 @@ public record DeviceResponse(
         Double lastLat,
         Double lastLon,
         Instant lastSeen,
-        Instant createdAt
+        Instant createdAt,
+        boolean insideAnyGeofence
 ) {}

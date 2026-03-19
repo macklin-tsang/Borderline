@@ -39,6 +39,7 @@ export interface Device {
   lastLon: number | null
   lastSeen: string | null
   createdAt: string
+  insideAnyGeofence: boolean
 }
 
 export interface LocationPingRequest {
@@ -75,9 +76,8 @@ export interface GeofenceAlert {
 }
 
 export interface SecurityEvent {
-  type: 'GEO_VIOLATION' | 'RATE_LIMIT' | 'INVALID_KEY'
+  type: 'RATE_LIMIT' | 'INVALID_KEY'
   apiKeyId: string | null
-  countryCode: string | null
   endpoint: string
   detail: string
   timestamp: string
@@ -91,7 +91,6 @@ export interface RequestLog {
   endpoint: string
   method: string
   statusCode: number
-  countryCode: string | null
   durationMs: number | null
   wasBlocked: boolean
   blockReason: string | null

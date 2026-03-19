@@ -7,6 +7,7 @@ import { geofenceApi } from '../api/geofences'
 import { deviceApi } from '../api/devices'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { SecurityPanel } from './SecurityPanel'
+import { ApiKeyPanel } from './ApiKeyPanel'
 
 interface Props {
   token: string
@@ -32,13 +33,40 @@ export function MapView({ token, onLogout }: Props) {
   const [devices, setDevices] = useState<Device[]>([])
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([])
   const [showSecurity, setShowSecurity] = useState(false)
+  const [showKeys, setShowKeys] = useState(false)
+  const [pendingGeofence, setPendingGeofence] = useState<{ geometry: Geofence['geometry'] } | null>(null)
+  const [pendingName, setPendingName] = useState('')
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null)
+
+  // Refs so the map click handler (registered once) always sees current values
+  const selectedDeviceIdRef = useRef<string | null>(null)
+  const refreshRef = useRef<() => void>(() => {})
+  const drawActiveRef = useRef(false)
+  selectedDeviceIdRef.current = selectedDeviceId
 
   // Load geofences + devices
   const refresh = useCallback(async () => {
-    const [gfs, devs] = await Promise.all([geofenceApi.list(), deviceApi.list()])
-    setGeofences(gfs)
-    setDevices(devs)
+    try {
+      const [gfs, devs] = await Promise.all([geofenceApi.list(), deviceApi.list()])
+      setGeofences(gfs)
+      setDevices(devs)
+    } catch { /* ignore — server may be temporarily unreachable */ }
   }, [])
+  refreshRef.current = refresh
+
+  const submitPendingGeofence = useCallback(async () => {
+    if (!pendingGeofence || !pendingName.trim()) return
+    const name = pendingName.trim()
+    setPendingGeofence(null)
+    setPendingName('')
+    try {
+      await geofenceApi.create({ name, geometry: pendingGeofence.geometry, alertOnEntry: true, alertOnExit: true })
+      toast.success(`Geofence "${name}" created`)
+      refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create geofence')
+    }
+  }, [pendingGeofence, pendingName, refresh])
 
   // WebSocket alert handler
   const handleAlert = useCallback((alert: GeofenceAlert) => {
@@ -52,11 +80,6 @@ export function MapView({ token, onLogout }: Props) {
 
   const handleSecurityEvents = useCallback((events: SecurityEvent[]) => {
     setSecurityEvents(prev => [...prev, ...events].slice(-200))
-    events.forEach(ev => {
-      if (ev.type === 'GEO_VIOLATION') {
-        toast.error(`Geo-violation blocked: ${ev.endpoint} (${ev.countryCode})`)
-      }
-    })
   }, [])
 
   useWebSocket({ token, onAlert: handleAlert, onSecurityEvents: handleSecurityEvents })
@@ -83,24 +106,26 @@ export function MapView({ token, onLogout }: Props) {
     })
     map.addControl(drawControl)
 
-    // On draw:created → prompt for name → POST to API
-    map.on(L.Draw.Event.CREATED, async (e: L.LeafletEvent) => {
+    // Track draw tool active state so map clicks don't also move a device
+    map.on(L.Draw.Event.DRAWSTART, () => { drawActiveRef.current = true })
+    map.on(L.Draw.Event.DRAWSTOP,  () => { drawActiveRef.current = false })
+
+    // On draw:created → show inline name prompt → POST to API on confirm
+    map.on(L.Draw.Event.CREATED, (e: L.LeafletEvent) => {
       const layer = (e as L.DrawEvents.Created).layer
       const geoJson = layer.toGeoJSON()
-      const name = prompt('Geofence name:')
-      if (!name?.trim()) return
-      try {
-        await geofenceApi.create({
-          name: name.trim(),
-          geometry: geoJson.geometry as Geofence['geometry'],
-          alertOnEntry: true,
-          alertOnExit: true,
-        })
-        toast.success(`Geofence "${name}" created`)
-        refresh()
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Failed to create geofence')
-      }
+      setPendingGeofence({ geometry: geoJson.geometry as Geofence['geometry'] })
+      setPendingName('')
+    })
+
+    // Click-to-move: teleport the selected device to wherever is clicked
+    map.on('click', (e: L.LeafletMouseEvent) => {
+      if (drawActiveRef.current) return
+      const id = selectedDeviceIdRef.current
+      if (!id) return
+      deviceApi.ping(id, { lat: e.latlng.lat, lon: e.latlng.lng })
+        .then(() => refreshRef.current())
+        .catch(() => {})
     })
 
     mapRef.current = map
@@ -119,10 +144,9 @@ export function MapView({ token, onLogout }: Props) {
         geoJsonLayer.bindTooltip(gf.name, { permanent: false, direction: 'center' })
         geoJsonLayer.on('click', () => {
           if (confirm(`Delete geofence "${gf.name}"?`)) {
-            geofenceApi.delete(gf.id).then(() => {
-              toast.success(`Deleted "${gf.name}"`)
-              refresh()
-            })
+            geofenceApi.delete(gf.id)
+              .then(() => { toast.success(`Deleted "${gf.name}"`); refresh() })
+              .catch(err => toast.error(err instanceof Error ? err.message : 'Failed to delete geofence'))
           }
         })
         layer.addLayer(geoJsonLayer)
@@ -138,12 +162,13 @@ export function MapView({ token, onLogout }: Props) {
     // Update or add markers
     devices.forEach(dev => {
       if (dev.lastLat == null || dev.lastLon == null) return
-      const inside = false // optimistic — real state comes from backend
+      const inside = dev.insideAnyGeofence
       const existing = markerMap.get(dev.id)
       const latlng = L.latLng(dev.lastLat, dev.lastLon)
 
       if (existing) {
         existing.setLatLng(latlng)
+        existing.setStyle({ color: inside ? '#22c55e' : '#94a3b8', fillColor: inside ? '#22c55e' : '#94a3b8' })
       } else {
         const marker = L.circleMarker(latlng, {
           radius: 8,
@@ -168,6 +193,15 @@ export function MapView({ token, onLogout }: Props) {
     })
   }, [devices])
 
+  // Leaflet doesn't detect CSS resize — invalidate when a side panel opens/closes
+  useEffect(() => { mapRef.current?.invalidateSize() }, [showSecurity, showKeys])
+
+  // Switch cursor to crosshair while a device is selected for click-to-move
+  useEffect(() => {
+    const container = mapRef.current?.getContainer()
+    if (container) container.style.cursor = selectedDeviceId ? 'crosshair' : ''
+  }, [selectedDeviceId])
+
   // Initial load + polling every 5s
   useEffect(() => {
     refresh()
@@ -187,8 +221,35 @@ export function MapView({ token, onLogout }: Props) {
           {geofences.length} geofences · {devices.length} devices
         </span>
         <div style={{ flex: 1 }} />
+        {devices.length > 0 && (
+          <select
+            value={selectedDeviceId ?? ''}
+            onChange={e => setSelectedDeviceId(e.target.value || null)}
+            style={{
+              padding: '0.35rem 0.6rem', borderRadius: 6, border: '1px solid #334155',
+              background: selectedDeviceId ? '#1e3a5f' : '#0f172a',
+              color: selectedDeviceId ? '#93c5fd' : '#64748b',
+              cursor: 'pointer', fontSize: '0.85rem', outline: 'none',
+            }}
+          >
+            <option value="">Move device…</option>
+            {devices.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        )}
         <button
-          onClick={() => setShowSecurity(s => !s)}
+          onClick={() => { setShowKeys(s => !s); setShowSecurity(false) }}
+          style={{
+            padding: '0.35rem 0.75rem', borderRadius: 6, border: '1px solid #334155',
+            background: showKeys ? '#3b82f6' : 'transparent',
+            color: showKeys ? '#fff' : '#94a3b8', cursor: 'pointer', fontSize: '0.85rem',
+          }}
+        >
+          API Keys
+        </button>
+        <button
+          onClick={() => { setShowSecurity(s => !s); setShowKeys(false) }}
           style={{
             padding: '0.35rem 0.75rem', borderRadius: 6, border: '1px solid #334155',
             background: showSecurity ? '#3b82f6' : 'transparent',
@@ -216,13 +277,56 @@ export function MapView({ token, onLogout }: Props) {
         </button>
       </div>
 
-      {/* Map + optional security panel */}
+      {/* Map + optional side panel */}
       <div style={{ flex: 1, position: 'relative' }}>
         <div
           ref={mapDivRef}
-          style={{ position: 'absolute', inset: 0, right: showSecurity ? 340 : 0 }}
+          style={{ position: 'absolute', inset: 0, right: (showSecurity || showKeys) ? 340 : 0 }}
         />
+        {pendingGeofence && (
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+            padding: '1rem', zIndex: 2000, display: 'flex', flexDirection: 'column', gap: '0.5rem',
+            minWidth: 240, boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+          }}>
+            <span style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.9rem' }}>Name this geofence</span>
+            <input
+              autoFocus
+              value={pendingName}
+              onChange={e => setPendingName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') submitPendingGeofence()
+                if (e.key === 'Escape') { setPendingGeofence(null); setPendingName('') }
+              }}
+              placeholder="e.g. Campus perimeter"
+              style={{
+                background: '#0f172a', border: '1px solid #475569', borderRadius: 6,
+                color: '#f1f5f9', padding: '0.4rem 0.6rem', fontSize: '0.85rem', outline: 'none',
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={submitPendingGeofence}
+                disabled={!pendingName.trim()}
+                style={{
+                  flex: 1, padding: '0.35rem', borderRadius: 6, border: 'none',
+                  background: pendingName.trim() ? '#3b82f6' : '#1e3a5f',
+                  color: '#fff', cursor: pendingName.trim() ? 'pointer' : 'not-allowed', fontSize: '0.8rem',
+                }}
+              >Create</button>
+              <button
+                onClick={() => { setPendingGeofence(null); setPendingName('') }}
+                style={{
+                  flex: 1, padding: '0.35rem', borderRadius: 6, border: '1px solid #334155',
+                  background: 'transparent', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem',
+                }}
+              >Cancel</button>
+            </div>
+          </div>
+        )}
         {showSecurity && <SecurityPanel liveEvents={securityEvents} />}
+        {showKeys && <ApiKeyPanel />}
       </div>
     </div>
   )

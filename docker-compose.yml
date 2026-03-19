@@ -19,6 +19,8 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -35,8 +37,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-borderline}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-in-prod!!}
-      HMAC_SECRET: ${HMAC_SECRET:-local-dev-hmac-secret-change-in-prod}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRY_MS: ${JWT_EXPIRY_MS:-86400000}
+      HMAC_SECRET: ${HMAC_SECRET:?HMAC_SECRET is required}
       HMAC_KEY_VERSION: ${HMAC_KEY_VERSION:-1}
     depends_on:
       postgres:
@@ -55,7 +58,15 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   postgres_data:
+  redis_data:
