@@ -1,0 +1,79 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #212529;
+  --muted: #5f6b76;
+  --line: #dee2e6;
+  --panel: #f8f9fa;
+  --anchored: #d9480f;
+  --other: #495057;
+  --zone: #1971c2;
+  --error: #c92a2a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16191d;
+    --fg: #e9ecef;
+    --muted: #9aa5b1;
+    --line: #343a40;
+    --panel: #1e2227;
+    --anchored: #ff922b;
+    --other: #adb5bd;
+    --zone: #74c0fc;
+    --error: #ff8787;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font: 15px/1.4 system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+header { padding: 0.6rem 1rem; border-bottom: 1px solid var(--line); }
+h1 { margin: 0; font-size: 1.15rem; }
+h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+
+#status { margin: 0.15rem 0 0; font-size: 0.85rem; color: var(--muted); }
+#status.error { color: var(--error); font-weight: 600; }
+
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 27rem; }
+#map { min-height: 0; }
+
+aside {
+  overflow: auto;
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+}
+section { margin-bottom: 1.25rem; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th, td { padding: 0.25rem 0.4rem; text-align: right; border-bottom: 1px solid var(--line); }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 600; }
+
+select, label { font-size: 0.85rem; }
+select { margin: 0 0 0.5rem 0.25rem; }
+
+.note { margin: 0.4rem 0 0; font-size: 0.78rem; color: var(--muted); }
+
+.legend { font-size: 0.82rem; color: var(--muted); }
+.dot { display: inline-block; width: 0.8rem; height: 0.8rem; margin: 0 0.25rem 0 0.6rem; border-radius: 50%; vertical-align: middle; }
+.dot.anchored { background: var(--anchored); }
+.dot.other { background: var(--other); }
+.zone-key { display: inline-block; width: 0.9rem; height: 0.9rem; margin: 0 0.25rem 0 0.6rem; border: 1px solid var(--zone); border-radius: 50%; vertical-align: middle; }
+
+@media (max-width: 800px) {
+  body { height: auto; }
+  main { grid-template-columns: 1fr; }
+  #map { height: 60vh; }
+  aside { border-left: 0; border-top: 1px solid var(--line); }
+}

@@ -1,0 +1,79 @@
+# The application. A Deployment, because the app keeps no data of its own (the database does).
+apiVersion: v1
+kind: Service
+metadata:
+  name: borderline
+spec:
+  selector:
+    app: borderline
+  ports:
+    - port: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: borderline
+spec:
+  # Exactly one copy. The tracker assumes it is the only consumer of the AISStream feed.
+  replicas: 1
+  # Recreate = stop the old pod BEFORE starting the new one. The default (RollingUpdate) would run
+  # old and new side by side for a while: two feed connections and every ship processed twice.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: borderline
+  template:
+    metadata:
+      labels:
+        app: borderline
+    spec:
+      containers:
+        - name: borderline
+          image: borderline:0.1
+          imagePullPolicy: IfNotPresent   # the image was imported into the cluster; there is no registry to pull from
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://db:5432/borderline
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: borderline-secrets
+                  key: DB_PASSWORD
+            - name: AISSTREAM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: borderline-secrets
+                  key: AISSTREAM_API_KEY
+          resources:
+            requests:        # what the scheduler reserves for us
+              memory: 256Mi
+              cpu: 100m
+            limits:          # above this memory the container is killed (OOMKilled)
+              memory: 512Mi
+          # 1. Startup: "has it finished starting?" Checked every 5 s for up to 2 minutes (24 x 5 s).
+          #    Until it passes, Kubernetes does not run the liveness probe, so a slow first start
+          #    (running the database migrations) is not mistaken for a hang.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 24
+          # 2. Liveness: "is the JVM stuck beyond repair?" 3 failures in a row = restart the container.
+          #    This deliberately ignores the database and AISStream: restarting cannot fix either.
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+          # 3. Readiness: "can it serve requests right now?" Includes the database check.
+          #    Failing = removed from the Service (no traffic), but NOT restarted.
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 5

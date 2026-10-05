@@ -1,72 +1,36 @@
 services:
-  postgres:
+  db:
     image: postgis/postgis:16-3.4
     environment:
       POSTGRES_DB: borderline
-      POSTGRES_USER: ${DB_USERNAME:-borderline}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-borderline}
+      POSTGRES_USER: borderline
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      # localhost only: don't expose the database to the network
+      - "127.0.0.1:5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-borderline} -d borderline"]
+      test: ["CMD-SHELL", "pg_isready -U borderline -d borderline"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  backend:
-    build: ./backend
-    ports:
-      - "8080:8080"
+  app:
+    build: .                      # build the image from the Dockerfile in this folder
+    depends_on:
+      db:
+        condition: service_healthy   # wait until the database passes its healthcheck
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/borderline
-      DB_USERNAME: ${DB_USERNAME:-borderline}
-      DB_PASSWORD: ${DB_PASSWORD:-borderline}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      JWT_EXPIRY_MS: ${JWT_EXPIRY_MS:-86400000}
-      HMAC_SECRET: ${HMAC_SECRET:?HMAC_SECRET is required}
-      HMAC_KEY_VERSION: ${HMAC_KEY_VERSION:-1}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-
-  frontend:
-    build: ./frontend
+      # Inside the compose network the database is reachable by its service name, "db".
+      # Spring turns SPRING_DATASOURCE_URL into the property spring.datasource.url.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/borderline
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      AISSTREAM_API_KEY: ${AISSTREAM_API_KEY:?set AISSTREAM_API_KEY in .env}
     ports:
-      - "3000:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ > /dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      - "127.0.0.1:8080:8080"     # localhost only, like the database
+    restart: unless-stopped
 
 volumes:
-  postgres_data:
-  redis_data:
+  pgdata:

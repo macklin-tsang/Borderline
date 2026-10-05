@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/borderline
+    username: borderline
+    password: ${DB_PASSWORD}
+  mvc:
+    problemdetails:
+      enabled: true   # every error becomes the standard application/problem+json (RFC 9457), never a stack trace
+
+aisstream:
+  api-key: ${AISSTREAM_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health   # the only endpoint reachable over HTTP
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db   # ready only when the database answers
