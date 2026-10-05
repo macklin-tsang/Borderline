@@ -127,9 +127,9 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Check** (passed 2026-10-04, in Chrome): circles line up with English Bay and anchored ships sit inside their zones; a fake ship named `<img src=x onerror=...><b>BOLD</b>` showed as plain text in the list and the tooltip (no `<img>` or `<b>` created, handler never ran); a forced inline handler was blocked by the CSP; the console is clean; the phone layout (390 px) has no sideways scroll. `./mvnw verify` passes (33 tests).
 
 ### Phase 8 — Local Kubernetes (k3d) with health probes
-- [ ] Actuator: add `spring-boot-starter-actuator`; `management.endpoint.health.probes.enabled: true`; `management.endpoint.health.group.readiness.include: readinessState,db`; only `health` exposed over HTTP
-- [ ] `k8s/postgres.yaml`: StatefulSet (1 replica, volume) + Service `db`; probes run `pg_isready`
-- [ ] `k8s/app.yaml`: Deployment + Service; `replicas: 1`, `strategy: Recreate`; image `borderline:0.1` (fixed tag, never `latest`); env from Secret `borderline-secrets` + `DB_URL=jdbc:postgresql://db:5432/borderline`; memory request 256Mi / limit 512Mi, `-XX:MaxRAMPercentage=75`
+- [x] Actuator (+ `ActuatorIT` guard test: probes UP, env/heapdump/metrics/beans/configprops/loggers/threaddump return 404): add `spring-boot-starter-actuator`; `management.endpoint.health.probes.enabled: true`; `management.endpoint.health.group.readiness.include: readinessState,db`; only `health` exposed over HTTP
+- [x] `k8s/postgres.yaml`: StatefulSet (1 replica, volume) + Service `db`; probes run `pg_isready`
+- [x] `k8s/app.yaml`: Deployment + Service; `replicas: 1`, `strategy: Recreate`; image `borderline:0.1` (fixed tag, never `latest`); env from Secret `borderline-secrets` + `DB_URL=jdbc:postgresql://db:5432/borderline`; memory request 256Mi / limit 512Mi, `-XX:MaxRAMPercentage=75`
 
 | Probe | Endpoint | Timing | Question | If it fails |
 |---|---|---|---|---|
@@ -149,7 +149,7 @@ kubectl apply -f k8s/
 kubectl get pods -w
 kubectl port-forward svc/borderline 8081:8080     # http://localhost:8081
 ```
-**Experiments** (each proves one concept):
+**Experiments** (each proves one concept). Rehearsed by Claude on 2026-10-05 in a throwaway trial cluster: all six passed. Run by you on the real cluster (self-reported). Rehearsal numbers: cluster ready 30 s, images imported 26 s, pods 1/1 about 21 s after apply with 2 expected startup restarts (app starts before the database is ready); liveness break gave restarts 1, 2, 3 about every 30 s; at most one app container ever running during a rollout.
 1. both pods reach `1/1 Running`; map loads via port-forward
 2. `kubectl scale statefulset postgres --replicas=0` → app pod `0/1` Ready, restart count stays 0; `kubectl get endpointslices -l kubernetes.io/service-name=borderline` shows it removed (port-forward bypasses this); scale back → Ready
 3. point liveness at `/actuator/health/nope`, apply → restart count climbs; revert
