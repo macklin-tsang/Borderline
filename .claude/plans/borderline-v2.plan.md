@@ -79,16 +79,16 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 ## Phases
 
 ### Phase 0 — Prerequisites (you)
-- [ ] Install Temurin JDK 21 → `java -version` says 21
-- [ ] Install Docker Desktop → `docker run hello-world`
-- [ ] Install k3d (k3d.io Windows installers); kubectl ships with Docker Desktop → `k3d version`, `kubectl version --client`
+- [x] Install Temurin JDK 21 → `java -version` says 21
+- [x] Install Docker Desktop → `docker run hello-world`
+- [x] Install k3d (k3d.io Windows installers); kubectl ships with Docker Desktop → `k3d version`, `kubectl version --client`
 - [ ] Get an AISStream API key (free, sign in with GitHub at aisstream.io)
 
 ### Phase 1 — Branch and clean slate
 - [x] `git switch -c v2`; delete `backend/`, `frontend/`, `Makefile`
 - [x] Rewrite `.gitignore`, `.env.example`, `docker-compose.yml` (db only; `postgis/postgis:16-3.4`, healthcheck, volume, port on `127.0.0.1`), `.editorconfig`, stub `README.md`
-- [ ] **You**: generate the project at the repo root with start.spring.io (Maven, Java 21, Spring Boot 4.x; Spring Web, JDBC API, PostgreSQL Driver, Flyway, Testcontainers). Unzip into the repo root; keep `mvnw`, `mvnw.cmd`, `.mvn/`.
-- **Check**: `docker compose up -d db`, then `./mvnw spring-boot:run` starts. Commit.
+- [x] **You**: generate the project at the repo root with start.spring.io (Maven, Java 21, Spring Boot 4.x; Spring Web, JDBC API, PostgreSQL Driver, Flyway, Testcontainers). Unzip into the repo root; keep `mvnw`, `mvnw.cmd`, `.mvn/`.
+- **Check** (passed 2026-10-04): `docker compose up -d db`, then `./mvnw spring-boot:run` starts. Committed.
 
 ### Phase 2 — Schema and anchorage data
 - [ ] `V1__schema.sql`: the three tables
