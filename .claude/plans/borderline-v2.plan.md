@@ -91,9 +91,9 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Check** (passed 2026-10-04): `docker compose up -d db`, then `./mvnw spring-boot:run` starts. Committed.
 
 ### Phase 2 — Schema and anchorage data
-- [ ] `V1__schema.sql`: the three tables
-- [ ] `V2__anchorages.sql`: transcribe each anchorage's ID, centre (degrees+minutes → decimal degrees) and swing radius from the latest Port Information Guide; confirm radius units
-- **Check**: in psql, a point at E01's centre returns only `E01`; a point in Stanley Park returns no rows.
+- [x] `V1__schema.sql`: the three tables
+- [x] `V2__anchorages.sql`: 32 anchorages (English Bay 20, Inner Harbour 8, Indian Arm 4) from guide pp.185-187, coordinates copied as printed in DMS and converted in SQL. **Plan change**: the guide gives no swing radius, only "maximum vessel length overall", so `radius_m` = that length (first estimate; calibrate against real ship positions in Phase 4). Roberts Bank and Sandheads left out (outside the map box).
+- **Check** (passed 2026-10-04): a point at E01's centre returns only `E01`; a point in Stanley Park returns no rows. Four pairs of 400 m anchorages (E01/E03, E03/E06, E06/E10, E10/E14) have overlapping zones, so the tracker picks the nearest centre.
 
 ### Phase 3 — Ingestion (fills `vessels`)
 - [ ] `PositionReport.parse()` + `PositionReportTest` (a real captured message and bad-value cases)
