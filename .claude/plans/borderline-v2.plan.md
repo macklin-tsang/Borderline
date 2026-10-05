@@ -65,13 +65,13 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 
 | Rule | Value | Why |
 |---|---|---|
-| In an anchorage | `ST_DWithin(center, ship, radius_m + 100)`; nearest wins | geography = metres not degrees; +100 m for GPS error |
+| In an anchorage | `ST_DWithin(center, ship, radius_m + 150)`; nearest wins for a new arrival; an open visit is judged against its own anchorage | geography = metres not degrees; the margin was 100 m but real ships sat up to 62 m beyond the radius, so 150 m keeps a drifting ship from splitting its wait in two |
 | Arrive | in an anchorage and speed < 0.5 kn | speed is measured; crew-set "at anchor" status is often stale |
 | Depart | left that anchorage, or speed > 2.0 kn | 0.5–2.0 kn gap (hysteresis) stops a swinging ship flipping |
 | Speed not available | change nothing | unknown speed ≠ moving |
-| Stale visit | no report for 6 h → close at last-seen time, **only if** the AISStream connection has been up ≥ 15 min | anchored ships report every ~3 min; guard stops laptop sleep/outage closing every visit |
+| Stale visit | no report for 6 h → close at last-seen time, **only if** our feed is healthy: positions arriving with no gap over 5 min for at least 15 min, and one within the last 5 min | anchored ships report every ~3 min; the guard stops laptop sleep or an outage closing every visit (socket-open time alone is not enough: after sleep it still looks "connected") |
 | Timestamp | server receive time | a few seconds don't matter for multi-day waits |
-| `seen_arriving` | false if first seen already anchored | start unknown, so stats only use visits we saw begin |
+| `seen_arriving` | false if the ship was first seen already anchored, or was last heard from more than 30 min earlier | start unknown, so stats only use visits we saw begin |
 
 **Concurrency**: the WebSocket listener calls `request(1)` only after the current message is fully processed → one message at a time, no locks.
 **Statistics**: `/api/stats?days=N` (N 1–365) per anchorage: ships waiting now, longest current wait, completed visits, average and median dwell hours (`percentile_cont(0.5)`).
@@ -103,9 +103,10 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Check** (passed 2026-10-04): `./mvnw test` passes (7 tests); 44 ships stored in 75 s of live data; a dead proxy shows the backoff growing (522, 1327, 3475, 6200 ms); with the silence limit temporarily set to 100 ms the watchdog aborts, reconnects and re-subscribes.
 
 ### Phase 4 — Anchorage detection and dwell time
-- [ ] Arrive/depart rules, `seen_arriving`, scheduled stale-visit cleanup
-- [ ] `AnchorageTrackerIT` against real PostGIS: outside → no visit; stopped in E01 → visit opens; 1 kn drift → stays open; 3 kn → closes with correct duration; stale rule with and without the 15-min guard; first seen already anchored → `seen_arriving = false`
-- **Check**: `./mvnw verify` passes; after ~1 h of live data, open visits list ships waiting in English Bay.
+- [x] Arrive/depart rules, `seen_arriving`, scheduled stale-visit cleanup. `handle(report, at)` takes the time as a parameter so tests can travel through hours of waiting.
+- [x] `AnchorageTrackerIT` (15 tests, runs in `./mvnw verify` via the failsafe plugin; `./mvnw test` skips it) against real PostGIS: outside → no visit; stopped in E01 → visit opens; 1 kn drift → stays open; 3 kn → closes with correct duration; stale rule with and without the 15-min guard; first seen already anchored → `seen_arriving = false`
+- **Check** (passed 2026-10-04): `./mvnw verify` passes (22 tests). Three deliberate code breaks (nearest-zone rule, 1.5 kn arrival threshold, no feed warm-up) were each caught by the intended test. After 8 min live, 22 ships were waiting: 15 English Bay, 4 Inner Harbour, 3 Indian Arm.
+- **Known data noise** (for later): tugs and work boats that sit still near an anchorage (e.g. CATES VIII, TRIDENT WARRIOR) count as visits. A ship-type filter (AIS `ShipStaticData`, cargo/tanker types) is the fix; it is on the "left out" list.
 
 ### Phase 5 — Containerize, start collecting, CI
 - [ ] `Dockerfile`: two-stage (`./mvnw package` → `eclipse-temurin:21-jre`), non-root user

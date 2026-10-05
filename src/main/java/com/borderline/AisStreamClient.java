@@ -129,7 +129,7 @@ public class AisStreamClient implements ApplicationRunner {
         try {
             Optional<PositionReport> report = PositionReport.parse(message);
             if (report.isPresent()) {
-                tracker.handle(report.get());
+                tracker.handle(report.get(), Instant.now());
             } else {
                 // Subscription confirmation, an error such as a bad API key, or an unusable position
                 log.info("AISStream: {}", message.length() > 200 ? message.substring(0, 200) + "..." : message);

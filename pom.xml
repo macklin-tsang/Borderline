@@ -76,6 +76,10 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<!-- Runs the *IT classes (integration tests) during "mvnw verify"; "mvnw test" skips them -->
+			<plugin>
+				<artifactId>maven-failsafe-plugin</artifactId>
+			</plugin>
 		</plugins>
 	</build>
 
