@@ -26,7 +26,7 @@ public class AnchorageTracker {
     // A ship is "in" an anchorage when it is within the anchorage's radius plus this margin.
     // Measured on 22 ships at anchor: the farthest sat 62 m beyond its anchorage's radius, so 100 m
     // left too little room and a drifting ship would split its wait into two visits.
-    private static final int ZONE_MARGIN_M = 150;
+    static final int ZONE_MARGIN_M = 150;  // not private: the API reports each zone's reach so the map draws what we detect with
 
     // Arrive below 0.5 knots, depart above 2.0. Speeds in between change nothing, so a ship
     // swinging at anchor does not flip between arrived and departed.

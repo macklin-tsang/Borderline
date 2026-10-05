@@ -122,9 +122,9 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Check** (passed 2026-10-04): `./mvnw verify` passes (31 tests); three deliberate SQL breaks (`count(*)` instead of `count(v.id)`, counting visits whose start was unseen, p90 instead of the median) were each caught. On the live container: 122 ships heard in 30 min, 27 at anchor, stats show 27 waiting; `days=0` → 400 `application/problem+json`.
 
 ### Phase 7 — Map page
-- [ ] `index.html` (Leaflet from CDN) + `app.js` (~150 lines): anchorages as `L.circle`; markers in a `Map<mmsi, marker>` updated every 10 s; anchored ships labelled "waiting 2d 4h at E05"; stats table every 60 s
-- [ ] Ship names are untrusted radio text → `textContent`/DOM nodes, never HTML strings
-- **Check**: circles line up with English Bay; a ship named `<img onerror=alert(1)>` (inserted via psql) shows as plain text.
+- [x] `index.html` (Leaflet 1.9.4 from unpkg, pinned with integrity hashes) + `style.css` + `app.js` (~190 lines), plus an "At anchor now" list and a 7/30/90-day window for the statistics. The API now also returns `reachM` (radius + detection margin) so the circles show exactly where the detector counts a ship as anchored: anchorages as `L.circle`; markers in a `Map<mmsi, marker>` updated every 10 s; anchored ships labelled "waiting 2d 4h at E05"; stats table every 60 s
+- [x] Ship names are untrusted radio text → `textContent`/DOM nodes, never HTML strings. Backed by a Content-Security-Policy (no inline scripts, CSS in its own file) and `StaticPageTest`, which fails the build if `app.js` ever uses `innerHTML` and friends.
+- **Check** (passed 2026-10-04, in Chrome): circles line up with English Bay and anchored ships sit inside their zones; a fake ship named `<img src=x onerror=...><b>BOLD</b>` showed as plain text in the list and the tooltip (no `<img>` or `<b>` created, handler never ran); a forced inline handler was blocked by the CSP; the console is clean; the phone layout (390 px) has no sideways scroll. `./mvnw verify` passes (33 tests).
 
 ### Phase 8 — Local Kubernetes (k3d) with health probes
 - [ ] Actuator: add `spring-boot-starter-actuator`; `management.endpoint.health.probes.enabled: true`; `management.endpoint.health.group.readiness.include: readinessState,db`; only `health` exposed over HTTP

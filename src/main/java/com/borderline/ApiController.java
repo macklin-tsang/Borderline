@@ -20,7 +20,8 @@ public class ApiController {
     private static final int VESSEL_FRESH_MINUTES = 30;
     private static final int MAX_STATS_DAYS = 365;
 
-    public record AnchorageInfo(String id, String name, String area, double lat, double lon, int radiusM) {}
+    /** reachM is how far from the centre a ship still counts as being in the anchorage (radius plus margin). */
+    public record AnchorageInfo(String id, String name, String area, double lat, double lon, int radiusM, int reachM) {}
 
     /** anchorageId, anchoredSince and arrivalSeen are null when the ship is not at anchor. */
     public record VesselInfo(long mmsi, String name, double lat, double lon, Double sogKnots,
@@ -39,10 +40,12 @@ public class ApiController {
     @GetMapping("/anchorages")
     public List<AnchorageInfo> anchorages() {
         return jdbc.sql("""
-                        SELECT id, name, area, ST_Y(center::geometry) AS lat, ST_X(center::geometry) AS lon, radius_m
+                        SELECT id, name, area, ST_Y(center::geometry) AS lat, ST_X(center::geometry) AS lon,
+                               radius_m, radius_m + :margin AS reach_m
                         FROM anchorages
                         ORDER BY id
                         """)
+                .param("margin", AnchorageTracker.ZONE_MARGIN_M)
                 .query(AnchorageInfo.class).list();
     }
 

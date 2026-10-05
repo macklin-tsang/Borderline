@@ -57,7 +57,8 @@ class ApiControllerIT {
                 .andExpect(jsonPath("$[0].id").value("E01"))
                 .andExpect(near("$[0].lat", 49.299167))
                 .andExpect(near("$[0].lon", -123.238611))
-                .andExpect(jsonPath("$[0].radiusM").value(400));
+                .andExpect(jsonPath("$[0].radiusM").value(400))
+                .andExpect(jsonPath("$[0].reachM").value(550));  // radius 400 + the 150 m margin
     }
 
     @Test
