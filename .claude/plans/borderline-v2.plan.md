@@ -109,11 +109,11 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Known data noise** (for later): tugs and work boats that sit still near an anchorage (e.g. CATES VIII, TRIDENT WARRIOR) count as visits. A ship-type filter (AIS `ShipStaticData`, cargo/tanker types) is the fix; it is on the "left out" list.
 
 ### Phase 5 — Containerize, start collecting, CI
-- [ ] `Dockerfile`: two-stage (`./mvnw package` → `eclipse-temurin:21-jre`), non-root user
-- [ ] Add `app` service to `docker-compose.yml`: port 8080, `restart: unless-stopped`, settings from `.env`
-- [ ] **Start collecting**: `docker compose up -d` and leave it running (waits last days; stats need data)
-- [ ] `.github/workflows/ci.yml`: `./mvnw verify` on every push
-- **Check**: `docker compose up --build` starts everything; CI passes.
+- [x] `Dockerfile`: two-stage (`./mvnw package` → `eclipse-temurin:21-jre`), non-root user (uid 999); `.dockerignore` keeps `.env` out of the image. Image is 511 MB, almost all base image (jar is 23 MB)
+- [x] Add `app` service to `docker-compose.yml`: port 8080 (bound to 127.0.0.1), `restart: unless-stopped`, waits for the database healthcheck, settings from `.env`
+- [x] **Start collecting**: `docker compose up --build -d` and leave it running (waits last days; stats need data). Started 2026-10-04 ~20:53 local; it only collects while the laptop and Docker are on.
+- [x] `.github/workflows/ci.yml`: `./mvnw verify` on every push (passes actionlint; has not run on GitHub yet because `v2` is not pushed). Also fixed: `mvnw` was committed without the executable bit, so CI's `./mvnw` would have failed with "Permission denied".
+- **Check**: `docker compose up --build` starts everything (passed 2026-10-04: 55 ships and 8 open visits within 2 minutes, container runs as non-root, no `.env` in the image). CI passing on GitHub is still to be confirmed after the first push.
 
 ### Phase 6 — REST API
 - [ ] `ApiController` (JdbcClient, records): `GET /api/anchorages`, `GET /api/vessels` (seen in last 30 min, with current anchorage and anchored-since), `GET /api/stats?days=30`

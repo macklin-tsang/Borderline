@@ -7,8 +7,9 @@ Status: v2 rebuild in progress - see .claude/plans/borderline-v2.plan.md
 ## Run
 
 ```
-cp .env.example .env
-docker compose up -d db
+cp .env.example .env          # then put your DB_PASSWORD and AISSTREAM_API_KEY in .env
+docker compose up --build -d  # starts PostGIS and the app
+docker compose logs -f app    # watch it connect to AISStream and detect anchored ships
 ```
 
-The app service arrives in a later phase.
+Needs Docker. The app listens on http://localhost:8080 (the API and map arrive in later phases).

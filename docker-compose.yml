@@ -17,5 +17,20 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build: .                      # build the image from the Dockerfile in this folder
+    depends_on:
+      db:
+        condition: service_healthy   # wait until the database passes its healthcheck
+    environment:
+      # Inside the compose network the database is reachable by its service name, "db".
+      # Spring turns SPRING_DATASOURCE_URL into the property spring.datasource.url.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/borderline
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      AISSTREAM_API_KEY: ${AISSTREAM_API_KEY:?set AISSTREAM_API_KEY in .env}
+    ports:
+      - "127.0.0.1:8080:8080"     # localhost only, like the database
+    restart: unless-stopped
+
 volumes:
   pgdata:

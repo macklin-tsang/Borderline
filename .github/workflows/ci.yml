@@ -1,0 +1,20 @@
+name: CI
+
+# Run on every push and every pull request
+on: [push, pull_request]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven   # keep downloaded dependencies between runs
+
+      # Compiles, runs the unit tests, then the integration tests (which start PostGIS
+      # in Docker; GitHub's Ubuntu machines have Docker installed).
+      - run: ./mvnw -B verify

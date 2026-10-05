@@ -1,0 +1,8 @@
+# Not sent to Docker when building the image. The important one is .env: it holds secrets.
+.env
+target/
+.git/
+.claude/
+.idea/
+.vscode/
+*.log
