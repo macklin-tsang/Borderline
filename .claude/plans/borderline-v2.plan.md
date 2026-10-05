@@ -96,11 +96,11 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Check** (passed 2026-10-04): a point at E01's centre returns only `E01`; a point in Stanley Park returns no rows. Four pairs of 400 m anchorages (E01/E03, E03/E06, E06/E10, E10/E14) have overlapping zones, so the tracker picks the nearest centre.
 
 ### Phase 3 — Ingestion (fills `vessels`)
-- [ ] `PositionReport.parse()` + `PositionReportTest` (a real captured message and bad-value cases)
-- [ ] `AisStreamClient` on `java.net.http.WebSocket`: subscribe to `PositionReport` only; bounding box ≈ `[[49.20,-123.40],[49.47,-122.83]]`; buffer partial binary frames; reconnect with backoff 1 s → 60 s; record when the connection came up (for the stale guard); skip connecting if the API key is blank
-- [ ] **Watchdog**: every 30 s, if connected and the last message is > 2 min old, drop the socket and take the normal reconnect path (half-open connections otherwise go unnoticed)
-- [ ] `handle()` only updates `vessels` in this phase
-- **Check**: `./mvnw test` passes; vessels count keeps growing; unplugging the network shows a reconnect; log shows "no messages for 2 min, reconnecting".
+- [x] `PositionReport.parse()` + `PositionReportTest` (a real captured message and bad-value cases). Real feed notes: a `SubscriptionConfirmation` arrives first; positions come from `Message.PositionReport` (`UserID`, `Latitude`, `Longitude`, `Sog`), ship name from `MetaData.ShipName` (space-padded).
+- [x] `AisStreamClient` on `java.net.http.WebSocket`: subscribe to `PositionReport` only; bounding box ≈ `[[49.20,-123.40],[49.47,-122.83]]`; buffer partial binary frames; reconnect with backoff 1 s → 60 s; skip connecting if the API key is blank. **Moved to Phase 4**: recording when the connection came up (only the stale-visit guard needs it).
+- [x] **Watchdog**: every 30 s, if connected and the last message is > 2 min old, drop the socket and take the normal reconnect path (half-open connections otherwise go unnoticed)
+- [x] `handle()` only updates `vessels` in this phase
+- **Check** (passed 2026-10-04): `./mvnw test` passes (7 tests); 44 ships stored in 75 s of live data; a dead proxy shows the backoff growing (522, 1327, 3475, 6200 ms); with the silence limit temporarily set to 100 ms the watchdog aborts, reconnects and re-subscribes.
 
 ### Phase 4 — Anchorage detection and dwell time
 - [ ] Arrive/depart rules, `seen_arriving`, scheduled stale-visit cleanup

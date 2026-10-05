@@ -12,7 +12,9 @@ class TestcontainersConfiguration {
     @Bean
     @ServiceConnection
     PostgreSQLContainer postgresContainer() {
-        return new PostgreSQLContainer(DockerImageName.parse("postgres:latest"));
+        // Same image as docker-compose.yml: our schema needs the PostGIS extension
+        DockerImageName postgis = DockerImageName.parse("postgis/postgis:16-3.4").asCompatibleSubstituteFor("postgres");
+        return new PostgreSQLContainer(postgis);
     }
 
 }

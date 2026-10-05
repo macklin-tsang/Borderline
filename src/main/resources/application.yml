@@ -3,3 +3,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/borderline
     username: borderline
     password: ${DB_PASSWORD}
+
+aisstream:
+  api-key: ${AISSTREAM_API_KEY:}
