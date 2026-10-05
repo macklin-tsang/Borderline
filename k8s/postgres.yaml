@@ -1,0 +1,73 @@
+# The database. A StatefulSet (not a Deployment) because it needs a stable name and its own disk.
+# Other pods reach it at the Service name "db".
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgis/postgis:16-3.4
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: borderline
+            - name: POSTGRES_USER
+              value: borderline
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: borderline-secrets
+                  key: DB_PASSWORD
+            - name: PGDATA   # a sub-folder, because the root of a fresh volume is not empty and Postgres refuses it
+              value: /var/lib/postgresql/data/pgdata
+          # Give the first start (creating the database) up to 60 s before the other probes begin
+          startupProbe:
+            exec:
+              command: ["pg_isready", "-U", "borderline", "-d", "borderline"]
+            periodSeconds: 2
+            failureThreshold: 30
+          # "Is it accepting connections?" If not, stop sending it traffic
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "borderline", "-d", "borderline"]
+            periodSeconds: 5
+          # "Is it still alive?" If not 3 times in a row, restart the container
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "borderline", "-d", "borderline"]
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  # Each pod gets its own 1 GB disk, which survives the pod being deleted and recreated
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
