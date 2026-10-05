@@ -160,7 +160,7 @@ kubectl port-forward svc/borderline 8081:8080     # http://localhost:8081
 Keep collecting in compose; the k3d database starts empty. Both running = 2 of AISStream's 3 connections.
 
 ### Phase 9 — Finish
-- [ ] README: what it does, architecture diagram, detection rules table, how to run (compose first, k3d second), concepts list, screenshot/GIF
+- [x] README (with a real screenshot, `docs/map.png`; links checked; verified from a fresh `git clone`: Docker image builds and `./mvnw -B verify` passes 41 tests with no env vars; git history scanned, no secrets in any of the 23 commits): what it does, architecture diagram, detection rules table, how to run (compose first, k3d second), concepts list, screenshot/GIF
 - [ ] PR `v2` → `main`, merge
 - **Check**: fresh clone runs with `cp .env.example .env` + `docker compose up --build`; CI passes on `main`.
 
