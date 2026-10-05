@@ -10,13 +10,6 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
-[*.{ts,tsx,js,jsx,json,yml,yaml}]
+[*.{js,html,css,json,yml,yaml,sql}]
 indent_style = space
 indent_size = 2
-
-[*.py]
-indent_style = space
-indent_size = 4
-
-[Makefile]
-indent_style = tab

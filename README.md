@@ -1,27 +1,14 @@
 # Borderline
 
-## Overview
-Borderline is a real-time geofencing and API security platform. Devices ping their location to the backend; WebSocket alerts fire when they cross geofence boundaries. API keys are rate-limited with per-key and per-IP Redis buckets.
+Live AIS ship tracking for the Port of Vancouver: detects ships waiting at English Bay / Burrard Inlet anchorages with PostGIS and measures how long they wait.
 
-## Tech Stack
-- **Backend**: Spring Boot, PostgreSQL/PostGIS, Redis
-- **Frontend**: React + TypeScript + Leaflet
+Status: v2 rebuild in progress - see .claude/plans/borderline-v2.plan.md
 
-## Setup
+## Run
 
-### Prerequisites
-- Docker + Docker Compose
+```
+cp .env.example .env
+docker compose up -d db
+```
 
-### Quick Start
-
-1. **Configure environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env — set DB_PASSWORD, JWT_SECRET, HMAC_SECRET
-   ```
-
-2. **Start all services**:
-   ```bash
-   make dev
-   ```
-   Frontend: http://localhost:3000 · Backend: http://localhost:8080
+The app service arrives in a later phase.
