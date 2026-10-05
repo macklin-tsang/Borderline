@@ -116,10 +116,10 @@ Dockerfile, docker-compose.yml, .env.example, .gitignore, .editorconfig, README.
 - **Check**: `docker compose up --build` starts everything (passed 2026-10-04: 55 ships and 8 open visits within 2 minutes, container runs as non-root, no `.env` in the image). CI passing on GitHub is still to be confirmed after the first push.
 
 ### Phase 6 — REST API
-- [ ] `ApiController` (JdbcClient, records): `GET /api/anchorages`, `GET /api/vessels` (seen in last 30 min, with current anchorage and anchored-since), `GET /api/stats?days=30`
-- [ ] Errors: `spring.mvc.problemdetails.enabled=true` (RFC 9457); bad `days` → 400; no stack traces
-- [ ] One stats case in `AnchorageTrackerIT`: known visits → known median
-- **Check**: `?days=0` → 400 `problem+json`; `?days=30` matches the same SQL run by hand.
+- [x] `ApiController` (JdbcClient, records): `GET /api/anchorages`, `GET /api/vessels` (seen in last 30 min, with current anchorage, anchored-since and whether we saw the arrival), `GET /api/stats?days=30` (one row per anchorage; waiting-now and longest-wait use every open visit, dwell average and median use only visits whose start we saw)
+- [x] Errors: `spring.mvc.problemdetails.enabled=true` (RFC 9457); bad `days` (outside 1-365, or not a number) → 400; no stack traces. Unknown URL → 404, POST → 405, all as problem+json.
+- [x] Stats cases with known visits → known median and average, in a new `ApiControllerIT` (9 tests, MockMvc against real PostGIS) instead of `AnchorageTrackerIT`
+- **Check** (passed 2026-10-04): `./mvnw verify` passes (31 tests); three deliberate SQL breaks (`count(*)` instead of `count(v.id)`, counting visits whose start was unseen, p90 instead of the median) were each caught. On the live container: 122 ships heard in 30 min, 27 at anchor, stats show 27 waiting; `days=0` → 400 `application/problem+json`.
 
 ### Phase 7 — Map page
 - [ ] `index.html` (Leaflet from CDN) + `app.js` (~150 lines): anchorages as `L.circle`; markers in a `Map<mmsi, marker>` updated every 10 s; anchored ships labelled "waiting 2d 4h at E05"; stats table every 60 s

@@ -3,6 +3,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/borderline
     username: borderline
     password: ${DB_PASSWORD}
+  mvc:
+    problemdetails:
+      enabled: true   # every error becomes the standard application/problem+json (RFC 9457), never a stack trace
 
 aisstream:
   api-key: ${AISSTREAM_API_KEY:}
